@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import ItemList from './ItemList';
 import MemberManager from './MemberManager';
 
-
 const MOCK_DATA = {
   'list-1': {
     id: 'list-1',
@@ -19,23 +18,63 @@ const MOCK_DATA = {
       { id: 'item-3', name: 'Vejce', solved: false },
     ],
   },
+
+  'list-2': {
+    id: 'list-2',
+    name: 'Párty Oslava',
+    owner: { id: 'user-2', name: 'Jana (Vlastník)' },
+    members: [
+      { id: 'user-1', name: 'Petr' },
+    ],
+    items: [
+      { id: 'item-4', name: 'Brambůrky', solved: false },
+      { id: 'item-5', name: 'Pivo', solved: false },
+    ],
+  },
+
+  'list-3': {
+    id: 'list-3',
+    name: 'Grilovačka',
+    owner: { id: 'user-1', name: 'Petr (Vlastník)' },
+    members: [
+      { id: 'user-3', name: 'Karel' },
+    ],
+    items: [
+      { id: 'item-6', name: 'Maso', solved: false },
+      { id: 'item-7', name: 'Pivo', solved: false },
+      { id: 'item-8', name: 'Chleba', solved: false },
+    ],
+  },
+
+  'list-4': {
+    id: 'list-4',
+    name: 'Starý nákup',
+    owner: { id: 'user-1', name: 'Petr (Vlastník)' },
+    members: [],
+    items: [
+      { id: 'item-9', name: 'Rohlíky', solved: true },
+    ],
+  },
 };
 
 
-const CURRENT_USER_ID = 'user-1'; 
+const CURRENT_USER_ID = 'user-1';
+
 
 const ShoppingListDetail = () => {
-  const { listId } = useParams(); 
+  const { listId } = useParams();
+
   const initialList = MOCK_DATA[listId];
 
-
   const [list, setList] = useState(initialList);
-  const [listNameInput, setListNameInput] = useState(initialList.name);
+
+  const [listNameInput, setListNameInput] = useState(initialList ? initialList.name : '');
+
+
 
   if (!list) {
-    return <div>Nákupní seznam nenalezen.</div>;
+    return <div>Nákupní seznam nenalezen nebo k němu nemáte přístup.</div>;
   }
-
 
   const isOwner = list.owner.id === CURRENT_USER_ID;
   const isMember = isOwner || list.members.some(m => m.id === CURRENT_USER_ID);
@@ -45,12 +84,9 @@ const ShoppingListDetail = () => {
   }
 
 
-
-
   const handleNameSave = () => {
     setList(prevList => ({ ...prevList, name: listNameInput }));
   };
-
 
   const handleAddMember = (name) => {
     if (name && isOwner) {
@@ -62,7 +98,6 @@ const ShoppingListDetail = () => {
     }
   };
 
-
   const handleRemoveMember = (memberId) => {
     if (isOwner) {
       setList(prevList => ({
@@ -72,16 +107,11 @@ const ShoppingListDetail = () => {
     }
   };
 
-
   const handleLeaveList = () => {
-    if (!isOwner) { 
-      setList(prevList => ({
-        ...prevList,
-        members: prevList.members.filter(m => m.id !== CURRENT_USER_ID),
-      }));
+    if (!isOwner) {
+      setList(undefined);
     }
   };
-
 
   const handleAddItem = (itemName) => {
     if (itemName) {
@@ -93,14 +123,12 @@ const ShoppingListDetail = () => {
     }
   };
 
-
   const handleRemoveItem = (itemId) => {
     setList(prevList => ({
       ...prevList,
       items: prevList.items.filter(i => i.id !== itemId),
     }));
   };
-
 
   const handleToggleItem = (itemId) => {
     setList(prevList => ({
@@ -111,16 +139,15 @@ const ShoppingListDetail = () => {
     }));
   };
 
-
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        
         {isOwner ? (
           <div>
             <input
               type="text"
               value={listNameInput}
+              key={list.name}
               onChange={(e) => setListNameInput(e.target.value)}
               style={styles.listNameInput}
             />
@@ -132,7 +159,6 @@ const ShoppingListDetail = () => {
       </header>
 
       <div style={styles.content}>
-        
         <MemberManager
           owner={list.owner}
           members={list.members}
@@ -142,8 +168,6 @@ const ShoppingListDetail = () => {
           onRemoveMember={handleRemoveMember}
           onLeaveList={handleLeaveList}
         />
-
-    
         <ItemList
           items={list.items}
           onAddItem={handleAddItem}
@@ -179,7 +203,7 @@ const styles = {
   },
   content: {
     display: 'grid',
-    gridTemplateColumns: '1fr 2fr', 
+    gridTemplateColumns: '1fr 2fr',
     gap: '30px',
   },
 };
