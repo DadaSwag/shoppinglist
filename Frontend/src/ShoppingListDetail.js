@@ -1,142 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ItemList from './ItemList';
 import MemberManager from './MemberManager';
-
-const MOCK_DATA = {
-  'list-1': {
-    id: 'list-1',
-    name: 'Víkendový nákup',
-    owner: { id: 'user-1', name: 'Petr (Vlastník)' },
-    members: [
-      { id: 'user-2', name: 'Jana' },
-      { id: 'user-3', name: 'Karel' },
-    ],
-    items: [
-      { id: 'item-1', name: 'Mléko', solved: false },
-      { id: 'item-2', name: 'Chleba', solved: true },
-      { id: 'item-3', name: 'Vejce', solved: false },
-    ],
-  },
-
-  'list-2': {
-    id: 'list-2',
-    name: 'Párty Oslava',
-    owner: { id: 'user-2', name: 'Jana (Vlastník)' },
-    members: [
-      { id: 'user-1', name: 'Petr' },
-    ],
-    items: [
-      { id: 'item-4', name: 'Brambůrky', solved: false },
-      { id: 'item-5', name: 'Pivo', solved: false },
-    ],
-  },
-
-  'list-3': {
-    id: 'list-3',
-    name: 'Grilovačka',
-    owner: { id: 'user-1', name: 'Petr (Vlastník)' },
-    members: [
-      { id: 'user-3', name: 'Karel' },
-    ],
-    items: [
-      { id: 'item-6', name: 'Maso', solved: false },
-      { id: 'item-7', name: 'Pivo', solved: false },
-      { id: 'item-8', name: 'Chleba', solved: false },
-    ],
-  },
-
-  'list-4': {
-    id: 'list-4',
-    name: 'Starý nákup',
-    owner: { id: 'user-1', name: 'Petr (Vlastník)' },
-    members: [],
-    items: [
-      { id: 'item-9', name: 'Rohlíky', solved: true },
-    ],
-  },
-};
-
+import { ShoppingListApi } from './api/ShoppingListApi';
 
 const CURRENT_USER_ID = 'user-1';
-
 
 const ShoppingListDetail = () => {
   const { listId } = useParams();
 
-  const initialList = MOCK_DATA[listId];
+  const [list, setList] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [listNameInput, setListNameInput] = useState('');
 
-  const [list, setList] = useState(initialList);
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await ShoppingListApi.getListDetail(listId);
+        setList(data);
+        if (data) {
+          setListNameInput(data.name);
+        }
+      } catch (error) {
+        console.error("Chyba při načítání detailu:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const [listNameInput, setListNameInput] = useState(initialList ? initialList.name : '');
+    loadData();
+  }, [listId]);
 
 
+  if (isLoading) {
+    return <div style={{ padding: 20 }}>Načítám detail seznamu...</div>;
+  }
 
   if (!list) {
-    return <div>Nákupní seznam nenalezen nebo k němu nemáte přístup.</div>;
+    return <div style={{ padding: 20 }}>Seznam nenalezen.</div>;
   }
 
   const isOwner = list.owner.id === CURRENT_USER_ID;
   const isMember = isOwner || list.members.some(m => m.id === CURRENT_USER_ID);
 
   if (!isMember) {
-    return <div>K tomuto seznamu nemáte přístup.</div>;
+    return <div style={{ padding: 20 }}>K tomuto seznamu nemáte přístup.</div>;
   }
 
-
-  const handleNameSave = () => {
-    setList(prevList => ({ ...prevList, name: listNameInput }));
+  const handleNameSave = async () => {
+    await ShoppingListApi.updateListName(list.id, listNameInput);
+    setList(prev => ({ ...prev, name: listNameInput }));
   };
 
-  const handleAddMember = (name) => {
-    if (name && isOwner) {
-      const newMember = { id: `user-${Date.now()}`, name };
-      setList(prevList => ({
-        ...prevList,
-        members: [...prevList.members, newMember],
-      }));
-    }
-  };
-
-  const handleRemoveMember = (memberId) => {
-    if (isOwner) {
-      setList(prevList => ({
-        ...prevList,
-        members: prevList.members.filter(m => m.id !== memberId),
-      }));
-    }
-  };
-
-  const handleLeaveList = () => {
-    if (!isOwner) {
-      setList(undefined);
-    }
-  };
-
-  const handleAddItem = (itemName) => {
+  const handleAddItem = async (itemName) => {
     if (itemName) {
-      const newItem = { id: `item-${Date.now()}`, name: itemName, solved: false };
-      setList(prevList => ({
-        ...prevList,
-        items: [...prevList.items, newItem],
-      }));
+      const newItem = await ShoppingListApi.addItem(list.id, itemName);
+      if (newItem) {
+        setList(prev => ({
+          ...prev,
+          items: [...prev.items, newItem],
+        }));
+      }
     }
   };
 
-  const handleRemoveItem = (itemId) => {
-    setList(prevList => ({
-      ...prevList,
-      items: prevList.items.filter(i => i.id !== itemId),
+  const handleRemoveItem = async (itemId) => {
+    await ShoppingListApi.removeItem(list.id, itemId);
+
+    setList(prev => ({
+      ...prev,
+      items: prev.items.filter(i => i.id !== itemId),
     }));
   };
 
-  const handleToggleItem = (itemId) => {
-    setList(prevList => ({
-      ...prevList,
-      items: prevList.items.map(item =>
+  const handleToggleItem = async (itemId) => {
+    await ShoppingListApi.toggleItem(list.id, itemId);
+
+    setList(prev => ({
+      ...prev,
+      items: prev.items.map(item =>
         item.id === itemId ? { ...item, solved: !item.solved } : item
       ),
     }));
+  };
+
+  const handleAddMember = (name) => {
+    console.log("Přidání člena zatím není napojeno na API:", name);
+  };
+
+  const handleRemoveMember = (memberId) => {
+    console.log("Odebrání člena zatím není napojeno na API:", memberId);
+  };
+
+  const handleLeaveList = () => {
+    console.log("Opuštění seznamu zatím není napojeno na API");
+    setList(null);
   };
 
   return (
@@ -147,11 +106,10 @@ const ShoppingListDetail = () => {
             <input
               type="text"
               value={listNameInput}
-              key={list.name}
               onChange={(e) => setListNameInput(e.target.value)}
               style={styles.listNameInput}
             />
-            <button onClick={handleNameSave}>Uložit název</button>
+            <button onClick={handleNameSave} style={styles.button}>Uložit název</button>
           </div>
         ) : (
           <h1>{list.name}</h1>
@@ -168,6 +126,7 @@ const ShoppingListDetail = () => {
           onRemoveMember={handleRemoveMember}
           onLeaveList={handleLeaveList}
         />
+
         <ItemList
           items={list.items}
           onAddItem={handleAddItem}
@@ -188,6 +147,7 @@ const styles = {
     border: '1px solid #ccc',
     borderRadius: '8px',
     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+    backgroundColor: '#fff',
   },
   header: {
     borderBottom: '2px solid #eee',
@@ -200,6 +160,16 @@ const styles = {
     border: '1px solid #ddd',
     padding: '5px',
     marginRight: '10px',
+    borderRadius: '4px',
+  },
+  button: {
+    padding: '8px 12px',
+    cursor: 'pointer',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '1em',
   },
   content: {
     display: 'grid',
