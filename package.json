@@ -18,7 +18,9 @@
   "homepage": "https://github.com/DadaSwag/shoppinglist#readme",
   "description": "",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^5.1.0",
-    "joi": "^18.0.1"
+    "joi": "^18.0.1",
+    "mongoose": "^9.0.0"
   }
 }
