@@ -2,8 +2,9 @@
   "name": "shoppinglist",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+"scripts": {
+    "start": "node Backend/index.js",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -20,7 +21,11 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "joi": "^18.0.1",
+    "joi": "^18.0.2",
     "mongoose": "^9.0.0"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4"
   }
 }
